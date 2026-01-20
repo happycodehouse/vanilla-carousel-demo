@@ -2,48 +2,80 @@ const $carousel = document.querySelector(".carousel"),
     $carouselInner = document.querySelector(".carousel-inner"),
     $slides = document.querySelectorAll(".slide"); // 초기 슬라이드 리스트
 
+const $controls = document.querySelector(".controls");
 const $nextBtn = document.querySelector("#nextBtn");
 const $prevBtn = document.querySelector("#prevBtn");
 
-let config = {gap: 10, widthPercent: 20};
+$howManyBtns = document.querySelectorAll(".how-many-carousel button");
+
+let config = {gap: 10, widthPercent: 20, limit: 4};
 let isTransitioning = false;
 
 function staticPosition() {
     const currentSlides = document.querySelectorAll(".slide");
+    const total = currentSlides.length;
+    const { gap, widthPercent } = config;
+    const carouselWidth = $carousel.offsetWidth;
 
-    currentSlides.forEach((slide) => {
-        const posIndex = parseInt(slide.dataset.pos);
-        const carouselWidth = $carousel.offsetWidth;
-        const centerX = carouselWidth / 2;
-        const {gap, widthPercent} = config;
-        const slideWidth = carouselWidth * (widthPercent / 100) - gap;
+    if (total <= config.limit) {
+        $carousel.classList.add("init");
+        $controls.classList.add("disabled");
+    } else {
+        $carousel.classList.remove("init");
+        $controls.classList.remove("disabled");
+        currentSlides.forEach((slide) => {
+            const posIndex = parseInt(slide.dataset.pos);
+            const slideWidth = (carouselWidth * (widthPercent / 100)) - gap;
+            const centerX = carouselWidth / 2;
 
-        let x = centerX - (slideWidth / 2) + (posIndex * (slideWidth + gap));
-        let zIndex = 10 - Math.abs(posIndex);
+            let x = centerX - (slideWidth / 2) + (posIndex * (slideWidth + gap));
 
-        slide.style.left = `${x}px`;
-        slide.style.width = `${slideWidth}px`;
-        slide.style.zIndex = Math.round(zIndex);
+            slide.classList.add("absolute");
+            slide.style.left = `${x}px`;
 
-        // 화면 밖 영역 투명도 처리
-        if (posIndex < -2 || posIndex > 2) {
-            slide.style.opacity = "0";
-            slide.style.visibility = "hidden";
-        } else {
-            slide.style.opacity = "1";
-            slide.style.visibility = "visible";
-        }
-
-        if (posIndex === 0) slide.classList.add('active');
-        else slide.classList.remove('active');
-    });
+            // 5개 이상일 때는 중앙(0)이 active
+            if (posIndex === 0) slide.classList.add('active');
+            else slide.classList.remove('active');
+        });
+    }
 }
 
 staticPosition();
 
+function updateSlideCount(count) {
+    if (isTransitioning) return;
+
+    $carouselInner.innerHTML = ""
+    console.log(count);
+
+    for (let i = 0; i < count; i++) {
+        const newSlide = document.createElement("div");
+        newSlide.classList.add("slide");
+
+        const imgNum = String(i + 1).padStart(2, "0");
+        newSlide.innerHTML = `
+                <img src="./images/img-${imgNum}.jpg" alt="Slide ${imgNum}">
+                <span>${i + 1}</span>
+            `;
+
+        newSlide.dataset.idx = i;
+
+        // 중앙(0)을 기준으로 초기 pos 설정
+        const startPos = -Math.floor(count / 2);
+        newSlide.dataset.pos = startPos + i;
+
+        $carouselInner.appendChild(newSlide);
+    }
+
+    staticPosition();
+}
+
 function next() {
     if (isTransitioning) return;
     isTransitioning = true;
+
+    const total = document.querySelectorAll(".slide").length;
+    if (total <= config.limit) return;
 
     // 1. 나갈 놈(-2)을 복제해서 클론 생성
     const outgoingSlide = Array.from(document.querySelectorAll(".slide"))
@@ -52,7 +84,7 @@ function next() {
     if (outgoingSlide) {
         const clone = outgoingSlide.cloneNode(true);
 
-        clone.style.transition = "none";
+        clone.classList.remove("transition");
         clone.dataset.pos = "3"; // 화면 오른쪽 끝 바로 바깥 위치
         $carouselInner.append(clone);
 
@@ -68,8 +100,7 @@ function next() {
     const allSlides = document.querySelectorAll(".slide");
     allSlides.forEach(slide => {
         // 다시 부드러운 이동을 위해 트랜지션 복구
-        slide.style.transition = "all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1)";
-
+        slide.classList.add("transition");
         let currentPos = parseInt(slide.dataset.pos);
         slide.dataset.pos = currentPos - 1;
     });
@@ -90,7 +121,7 @@ function next() {
 }
 
 function prev() {
-    if (isTransitioning) return;
+    if (isTransitioning || document.querySelectorAll(".slide").length <= config.limit) return;
     isTransitioning = true;
 
     const currentSlides = document.querySelectorAll(".slide");
@@ -99,7 +130,7 @@ function prev() {
 
     if (outgoingSlide) {
         const clone = outgoingSlide.cloneNode(true);
-        clone.style.transition = "none";
+        clone.classList.remove("transition");
         clone.dataset.pos = "-3";
         $carouselInner.prepend(clone);
 
@@ -110,7 +141,7 @@ function prev() {
     // 2. 모든 슬라이드를 오른쪽으로 이동 (+1)
     const allSlides = document.querySelectorAll(".slide");
     allSlides.forEach(slide => {
-        slide.style.transition = "all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1)";
+        slide.classList.add("transition");
         let currentPos = parseInt(slide.dataset.pos);
         slide.dataset.pos = currentPos + 1;
     });
@@ -130,3 +161,15 @@ function prev() {
 
 $nextBtn.addEventListener("click", next);
 $prevBtn.addEventListener("click", prev);
+$howManyBtns.forEach((btn, idx) => {
+    btn.addEventListener("click", () => {
+        const currentActive = document.querySelector(".how-many-carousel button.active");
+        if (currentActive) {
+            currentActive.classList.remove("active");
+        }
+        btn.classList.add("active");
+        updateSlideCount(idx + 1);
+    });
+});
+
+window.addEventListener("resize", staticPosition);
