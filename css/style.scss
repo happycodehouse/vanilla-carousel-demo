@@ -36,6 +36,7 @@
         padding: 0 to_vw(2);
         margin: 0 to_vw(2);
         font-family: "AustinNewsDeckWeb", sans-serif;
+        font-style: italic;
 
         &:not(.active):hover {
             text-decoration: underline;
