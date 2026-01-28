@@ -29,6 +29,7 @@
 let config = { 
     gap: 10,           // Space between slides
     widthPercent: 20,  // Slide width (%)
-    limit: 4           // Min slides for controls
+    limit: 4           // Controls enabled when slides > 4
 };
 ```
+
